@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 	"errors"
+	"time"
 )
 
 var (
@@ -29,3 +30,16 @@ type ProcessingCenter interface {
 	Credit(ctx context.Context, account string, amount string, txnID string) (*PaymentResult, error)
 }
 
+type Payment struct {
+	TxnID     string
+	Account   string
+	Amount    string
+	PrvTxn    string //айди транзакции в процессинге
+	Status    string
+	CreatedAt time.Time
+}
+
+type PaymentRepository interface {
+	Save(ctx context.Context, payment *Payment) error
+	GetByTxnID(ctx context.Context, txnID string) (*Payment, error)
+}
