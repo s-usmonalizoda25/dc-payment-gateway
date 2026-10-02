@@ -20,10 +20,10 @@ func NewPostgresRepository(db *sql.DB) *PostgresRepository {
 
 func (r *PostgresRepository) Save(ctx context.Context, p *domain.Payment) error {
 	const query = `
-			INSERT INTO payments (txt_id, account, amount, prv_txn, status, created_at)
-			VALUES($1, $2, $3, $4, $5, $6)
-			ON CONFLICT (txn_id) DO UPDATE
-			SET STATUS = EXCLUDED.status, prv_txn = EXCLUDED.prv_txn;
+		INSERT INTO payments (txn_id, account, amount, prv_txn, status, created_at)
+		VALUES($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (txn_id) DO UPDATE
+		SET status = EXCLUDED.status, prv_txn = EXCLUDED.prv_txn;
 	`
 	_, err := r.db.ExecContext(ctx, query, p.TxnID, p.Account, p.Amount, p.PrvTxn, p.Status, p.CreatedAt)
 	if err != nil {
@@ -33,11 +33,10 @@ func (r *PostgresRepository) Save(ctx context.Context, p *domain.Payment) error 
 }
 
 func (r *PostgresRepository) GetByTxnID(ctx context.Context, txnID string) (*domain.Payment, error) {
-
 	const query = `
-			SELECT txn_id, account, amount, prv_txn, status, created_at
-			FROM payments
-			WHERE txn_id = $1;
+		SELECT txn_id, account, amount, prv_txn, status, created_at
+		FROM payments
+		WHERE txn_id = $1;
 	`
 	p := &domain.Payment{}
 	var prvTxn sql.NullString
@@ -46,7 +45,7 @@ func (r *PostgresRepository) GetByTxnID(ctx context.Context, txnID string) (*dom
 		&p.TxnID,
 		&p.Account,
 		&p.Amount,
-		&p.PrvTxn,
+		&prvTxn,
 		&p.Status,
 		&p.CreatedAt,
 	)
