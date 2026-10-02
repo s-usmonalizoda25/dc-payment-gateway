@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/s-usmonalizoda25/dc-payment-gateway/internal/domain"
 	"go.uber.org/zap"
@@ -52,11 +53,12 @@ func (s *PaymentService) ProcessPayment(ctx context.Context, account string, amo
 	}
 
 	payment := &domain.Payment{
-		TxnID:   txnID,
-		Account: account,
-		Amount:  amount,
-		PrvTxn:  result.PrvTxn,
-		Status:  result.Status,
+		TxnID:     txnID,
+		Account:   account,
+		Amount:    amount,
+		PrvTxn:    result.PrvTxn,
+		Status:    result.Status,
+		CreatedAt: time.Now(),
 	}
 
 	err = s.repo.Save(ctx, payment)
