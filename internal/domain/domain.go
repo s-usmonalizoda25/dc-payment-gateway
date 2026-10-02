@@ -14,10 +14,10 @@ var (
 )
 
 type AccountInfo struct {
-	Account  string
-	FullName string
-	Balance  string
-	IsActive bool
+	Account  string  `json:"account"`
+	FullName string  `json:"full_name"`
+	Balance  float64 `json:"balance"`
+	IsActive bool    `json:"is_active"`
 }
 
 type PaymentResult struct {
@@ -34,7 +34,7 @@ type Payment struct {
 	TxnID     string
 	Account   string
 	Amount    string
-	PrvTxn    string //айди транзакции в процессинге
+	PrvTxn    string // айди транзакции в процессинге
 	Status    string
 	CreatedAt time.Time
 }
@@ -42,4 +42,9 @@ type Payment struct {
 type PaymentRepository interface {
 	Save(ctx context.Context, payment *Payment) error
 	GetByTxnID(ctx context.Context, txnID string) (*Payment, error)
+}
+
+type AccountRepository interface {
+	FindByAccount(ctx context.Context, account string) (*AccountInfo, error)
+	Credit(ctx context.Context, account string, amount string) error
 }

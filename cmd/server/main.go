@@ -17,6 +17,7 @@ import (
 	"github.com/s-usmonalizoda25/dc-payment-gateway/internal/pc"
 	"github.com/s-usmonalizoda25/dc-payment-gateway/internal/repository"
 	"github.com/s-usmonalizoda25/dc-payment-gateway/internal/service"
+	httptransport "github.com/s-usmonalizoda25/dc-payment-gateway/internal/transport/http"
 	"github.com/s-usmonalizoda25/dc-payment-gateway/pkg/logger"
 	"go.uber.org/zap"
 )
@@ -43,18 +44,19 @@ func main() {
 	}
 	logg.Info("database connection established")
 
-	repo := repository.NewPostgresRepository(db)
-	mockPC := pc.NewMock()
-	paymentSvc := service.NewPaymentService(repo, mockPC, logg)
+	paymentRepo := repository.NewPostgresRepository(db)
+	accountRepo := repository.NewAccountPostgresRepository(db)
 
-	expressPayHandler := expresspay.NewHandler(paymentSvc, cfg.ExpressPay.Login, cfg.ExpressPay.Password, logg)
+	postgresPC := pc.NewPostgresPC(accountRepo)
+	paymentSvc := service.NewPaymentService(paymentRepo, postgresPC, logg)
 
-	mux := http.NewServeMux()
-	mux.Handle("/test.asp", expressPayHandler)
+	expressPayHandler := expresspay.NewHandler(paymentSvc, cfg.ExpressPay.Password, logg)
+
+	router := httptransport.NewRouter(expressPayHandler)
 
 	srv := &http.Server{
 		Addr:    cfg.ServerPort,
-		Handler: mux,
+		Handler: router,
 	}
 
 	go func() {
