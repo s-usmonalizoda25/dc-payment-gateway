@@ -22,13 +22,22 @@ func (r *PostgresRepository) Save(ctx context.Context, p *domain.Payment) error 
 	const query = `
 		INSERT INTO payments (txn_id, account, amount, prv_txn, status, created_at)
 		VALUES($1, $2, $3, $4, $5, $6)
-		ON CONFLICT (txn_id) DO UPDATE
-		SET status = EXCLUDED.status, prv_txn = EXCLUDED.prv_txn;
+		ON CONFLICT (txn_id) DO NOTHING;
 	`
-	_, err := r.db.ExecContext(ctx, query, p.TxnID, p.Account, p.Amount, p.PrvTxn, p.Status, p.CreatedAt)
+	res, err := r.db.ExecContext(ctx, query, p.TxnID, p.Account, p.Amount, p.PrvTxn, p.Status, p.CreatedAt)
 	if err != nil {
 		return err
 	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows == 0 {
+		return domain.ErrTxnAlreadyExist
+	}
+
 	return nil
 }
 

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/s-usmonalizoda25/dc-payment-gateway/internal/domain"
@@ -20,6 +21,10 @@ func NewPaymentService(repo domain.PaymentRepository, proc domain.ProcessingCent
 		proc:   proc,
 		logger: logger,
 	}
+}
+
+func (s *PaymentService) CheckAccount(ctx context.Context, account string) (*domain.AccountInfo, error) {
+	return s.proc.CheckAccount(ctx, account)
 }
 
 func (s *PaymentService) ProcessPayment(ctx context.Context, account string, amount string, txnID string) (*domain.Payment, error) {
@@ -62,6 +67,13 @@ func (s *PaymentService) ProcessPayment(ctx context.Context, account string, amo
 	}
 
 	err = s.repo.Save(ctx, payment)
+	if errors.Is(err, domain.ErrTxnAlreadyExist) {
+		existing, ferr := s.repo.GetByTxnID(ctx, txnID)
+		if ferr == nil && existing != nil {
+			return existing, nil
+		}
+	}
+
 	if err != nil {
 		s.logger.Error("failed to save payment to db",
 			zap.String("txn_id", txnID),

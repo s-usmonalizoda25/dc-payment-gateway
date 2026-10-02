@@ -12,7 +12,8 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/s-usmonalizoda25/dc-payment-gateway/internal/handler"
+	"github.com/s-usmonalizoda25/dc-payment-gateway/internal/config"
+	"github.com/s-usmonalizoda25/dc-payment-gateway/internal/expresspay"
 	"github.com/s-usmonalizoda25/dc-payment-gateway/internal/pc"
 	"github.com/s-usmonalizoda25/dc-payment-gateway/internal/repository"
 	"github.com/s-usmonalizoda25/dc-payment-gateway/internal/service"
@@ -21,15 +22,17 @@ import (
 )
 
 func main() {
-	logg, err := logger.New("development")
+	cfg := config.GetConfig()
+
+	logg, err := logger.New(cfg.Env)
 	if err != nil {
 		log.Fatalf("failed to init logger: %v", err)
 	}
 	defer logg.Sync()
 
-	logg.Info("starting dc-payment-gateway service...")
-	dsn := "postgres://postgres:postgres@localhost:5432/dc_payment_db?sslmode=disable"
-	db, err := sql.Open("pgx", dsn)
+	logg.Info("starting dc-payment-gateway service...", zap.String("env", cfg.Env))
+
+	db, err := sql.Open("pgx", cfg.DB.DSN())
 	if err != nil {
 		logg.Fatal("db connection failed", zap.Error(err))
 	}
@@ -43,18 +46,19 @@ func main() {
 	repo := repository.NewPostgresRepository(db)
 	mockPC := pc.NewMock()
 	paymentSvc := service.NewPaymentService(repo, mockPC, logg)
-	paymentHandler := handler.NewPaymentHandler(paymentSvc, logg)
+
+	expressPayHandler := expresspay.NewHandler(paymentSvc, cfg.ExpressPay.Login, cfg.ExpressPay.Password, logg)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v1/payments", paymentHandler.ProcessPayment)
+	mux.Handle("/test.asp", expressPayHandler)
 
 	srv := &http.Server{
-		Addr:    ":8080",
+		Addr:    cfg.ServerPort,
 		Handler: mux,
 	}
 
 	go func() {
-		logg.Info("HTTP server running on :8080")
+		logg.Info("HTTP server running", zap.String("port", cfg.ServerPort))
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logg.Fatal("HTTP server listen failed", zap.Error(err))
 		}
