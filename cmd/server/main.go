@@ -14,6 +14,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/s-usmonalizoda25/dc-payment-gateway/internal/config"
 	"github.com/s-usmonalizoda25/dc-payment-gateway/internal/expresspay"
+	"github.com/s-usmonalizoda25/dc-payment-gateway/internal/migrations"
 	"github.com/s-usmonalizoda25/dc-payment-gateway/internal/pc"
 	"github.com/s-usmonalizoda25/dc-payment-gateway/internal/repository"
 	"github.com/s-usmonalizoda25/dc-payment-gateway/internal/service"
@@ -43,6 +44,11 @@ func main() {
 		logg.Fatal("db ping failed", zap.Error(err))
 	}
 	logg.Info("database connection established")
+
+	if err := migrations.Run(context.Background(), db); err != nil {
+		logg.Fatal("migrations failed", zap.Error(err))
+	}
+	logg.Info("migrations applied")
 
 	paymentRepo := repository.NewPostgresRepository(db)
 	accountRepo := repository.NewAccountPostgresRepository(db)
